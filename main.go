@@ -34,7 +34,7 @@ type incStore struct {
 }
 
 var counter counterStore
-var incClients incStore
+var incs incStore
 
 func (s *incStore) push(id string) {
 	s.mu.Lock()
@@ -63,13 +63,12 @@ type mainViewData struct {
 // handlers
 
 func index(w http.ResponseWriter, r *http.Request) {
-	clientID := getClientID(w, r)
-	incIDs := incClients.load()
+	clientID := getOrSetClientID(w, r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	data := mainViewData{
 		ClientID: clientID,
 		Counter:  counter.load(),
-		IncIDs:   incIDs,
+		IncIDs:   []string{},
 	}
 
 	// index templaate (full html)
@@ -80,7 +79,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func stream(w http.ResponseWriter, r *http.Request) {
-	clientID := getClientID(w, r)
+	clientID := getOrSetClientID(w, r)
 	sse := datastar.NewSSE(w, r)
 
 	// loop with 10 fps
@@ -88,14 +87,14 @@ func stream(w http.ResponseWriter, r *http.Request) {
 		if sse.IsClosed() {
 			return
 		}
-		recentIncs := incClients.load()
+		incIDs := incs.load()
 
 		// main template, gets morphed by datastar
 		var buf bytes.Buffer
 		err := indexTpl.ExecuteTemplate(&buf, "main", mainViewData{
 			ClientID: clientID,
 			Counter:  counter.load(),
-			IncIDs:   recentIncs,
+			IncIDs:   incIDs,
 		})
 		if err != nil {
 			return
@@ -108,15 +107,15 @@ func stream(w http.ResponseWriter, r *http.Request) {
 }
 
 func increment(w http.ResponseWriter, r *http.Request) {
-	clientID := getClientID(w, r)
+	clientID := getOrSetClientID(w, r)
 	counter.inc()
-	incClients.push(clientID)
+	incs.push(clientID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 // helpers
 
-func getClientID(w http.ResponseWriter, r *http.Request) string {
+func getOrSetClientID(w http.ResponseWriter, r *http.Request) string {
 	if cookie, err := r.Cookie(clientCookieName); err == nil && cookie.Value != "" {
 		id := cookie.Value
 		return id
