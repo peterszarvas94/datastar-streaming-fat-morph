@@ -10,10 +10,11 @@
     ></script>
   </head>
   <body data-init="@get('/stream')">
+    <p>Client ID: {{ .ClientID }}</p>
     {{ block "main" . }}
     <main id="main">
       <h1>Datastar fat morph</h1>
-      <p>Client ID: {{ .ClientID }}</p>
+      <p>Server time: {{ .ServerAt }}</p>
       <p>Counter: {{ .Counter }}</p>
       <button data-on:click="@post('/increment')">Increment</button>
       <button data-on:click="@post('/decrement')">Decrement</button>

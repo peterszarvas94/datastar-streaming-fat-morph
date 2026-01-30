@@ -11,6 +11,7 @@ import (
 const clientCookieName = "datastar-client-id"
 
 func getOrSetClientID(w http.ResponseWriter, r *http.Request) string {
+	// Read the client ID cookie or set a new one.
 	if cookie, err := r.Cookie(clientCookieName); err == nil && cookie.Value != "" {
 		return cookie.Value
 	}
@@ -28,6 +29,7 @@ func getOrSetClientID(w http.ResponseWriter, r *http.Request) string {
 }
 
 func newClientID() string {
+	// Create a random client ID for tracking actions.
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return fmt.Sprintf("fallback-%d", time.Now().UnixNano())

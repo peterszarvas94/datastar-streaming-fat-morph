@@ -8,13 +8,9 @@ import (
 // main
 
 func main() {
-	var err error
-	db, err = initDB(sqlitePath)
-	if err != nil {
-		log.Fatalf("failed to init sqlite: %v", err)
-	}
-	eventQueue = make(chan counterEvent, eventQueueSize)
-	startCounterEventWorker(db, eventQueue)
+	// Initialize DB, start hub and background workers, then serve HTTP.
+	hub = newHub()
+	hub.start()
 	log.Printf("server listening on http://localhost:8080")
 
 	http.HandleFunc("/", index)

@@ -9,14 +9,6 @@ type counterStore struct {
 	value int64
 }
 
-func (c *counterStore) inc() {
-	atomic.AddInt64(&c.value, 1)
-}
-
-func (c *counterStore) load() int64 {
-	return atomic.LoadInt64(&c.value)
-}
-
 type counterActionType string
 
 const (
@@ -43,6 +35,7 @@ var (
 )
 
 func (s *counterActionStore) push(action counterAction) {
+	// Keep a bounded list of recent actions.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.actions = append(s.actions, action)
@@ -52,6 +45,7 @@ func (s *counterActionStore) push(action counterAction) {
 }
 
 func (s *counterActionStore) load() []counterAction {
+	// Return a copy to avoid data races.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	actions := make([]counterAction, len(s.actions))
@@ -60,9 +54,10 @@ func (s *counterActionStore) load() []counterAction {
 }
 
 func applyCounterAction(action counterActionType) {
+	// Apply a counter action to in-memory state.
 	switch action {
 	case actionIncrement:
-		counter.inc()
+		atomic.AddInt64(&counter.value, 1)
 	case actionDecrement:
 		atomic.AddInt64(&counter.value, -1)
 	case actionReset:

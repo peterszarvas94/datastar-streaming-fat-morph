@@ -1,5 +1,5 @@
 [build]
-  cmd = "go build -o ./tmp/fat-morph ."
+  cmd = "go build -o ./tmp/fat-morph ./src"
   bin = "./tmp/fat-morph"
   delay = 1000
   exclude_dir = ["tmp", "vendor", "node_modules", ".git"]
