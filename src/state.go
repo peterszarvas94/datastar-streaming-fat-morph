@@ -2,12 +2,8 @@ package main
 
 import (
 	"sync"
-	"sync/atomic"
+	"time"
 )
-
-type counterStore struct {
-	value int64
-}
 
 type counterActionType string
 
@@ -20,6 +16,7 @@ const (
 type counterAction struct {
 	ClientID string
 	Action   counterActionType
+	At       string
 }
 
 type counterActionStore struct {
@@ -29,38 +26,42 @@ type counterActionStore struct {
 
 const maxActionHistory = 100
 
-var (
-	counter       counterStore
-	counterEvents counterActionStore
-)
+type appState struct {
+	mu      sync.Mutex
+	counter int64
+	actions []counterAction
+}
 
-func (s *counterActionStore) push(action counterAction) {
-	// Keep a bounded list of recent actions.
+var state appState
+
+func (s *appState) applyAction(action counterActionType, clientID string) int64 {
+	// Apply a counter action and record it.
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.actions = append(s.actions, action)
+	switch action {
+	case actionIncrement:
+		s.counter++
+	case actionDecrement:
+		s.counter--
+	case actionReset:
+		s.counter = 0
+	}
+	s.actions = append(s.actions, counterAction{
+		ClientID: clientID,
+		Action:   action,
+		At:       time.Now().Format(time.RFC3339),
+	})
 	if len(s.actions) > maxActionHistory {
 		s.actions = s.actions[len(s.actions)-maxActionHistory:]
 	}
+	return s.counter
 }
 
-func (s *counterActionStore) load() []counterAction {
-	// Return a copy to avoid data races.
+func (s *appState) snapshot() (int64, []counterAction) {
+	// Return a consistent snapshot of counter and actions.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	actions := make([]counterAction, len(s.actions))
 	copy(actions, s.actions)
-	return actions
-}
-
-func applyCounterAction(action counterActionType) {
-	// Apply a counter action to in-memory state.
-	switch action {
-	case actionIncrement:
-		atomic.AddInt64(&counter.value, 1)
-	case actionDecrement:
-		atomic.AddInt64(&counter.value, -1)
-	case actionReset:
-		atomic.StoreInt64(&counter.value, 0)
-	}
+	return s.counter, actions
 }

@@ -22,7 +22,7 @@
       <h2>Counter actions</h2>
       <ul id="inc-list">
         {{ range .Actions }}
-        <li>{{ .Action }} by {{ .ClientID }}</li>
+        <li>{{ .Action }} by {{ .ClientID }} at {{ .At }}</li>
         {{ end }}
       </ul>
     </main>

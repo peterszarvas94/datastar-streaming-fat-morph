@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"sync/atomic"
 	"time"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -25,10 +24,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 	clientID := getOrSetClientID(w, r)
 	log.Printf("index request client=%s", clientID)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	counterValue, actions := state.snapshot()
 	data := mainViewData{
 		ClientID: clientID,
-		Counter:  atomic.LoadInt64(&counter.value),
-		Actions:  counterEvents.load(),
+		Counter:  counterValue,
+		Actions:  actions,
 		ServerAt: time.Now().Format(time.RFC3339),
 	}
 
@@ -85,9 +85,8 @@ func handleCounterAction(w http.ResponseWriter, r *http.Request, action counterA
 	// Apply the action in memory, then broadcast HTML patch.
 	clientID := getOrSetClientID(w, r)
 	log.Printf("action request action=%s client=%s", action, clientID)
-	applyCounterAction(action)
-	counterEvents.push(counterAction{ClientID: clientID, Action: action})
-	log.Printf("counter action=%s client=%s value=%d", action, clientID, atomic.LoadInt64(&counter.value))
+	counterValue := state.applyAction(action, clientID)
+	log.Printf("counter action=%s client=%s value=%d", action, clientID, counterValue)
 	if patch, err := renderMainPatch(clientID); err != nil {
 		log.Printf("render patch failed: %v", err)
 	} else {
@@ -99,11 +98,11 @@ func handleCounterAction(w http.ResponseWriter, r *http.Request, action counterA
 
 func renderMainPatch(clientID string) (string, error) {
 	// Render the patch for the main content area.
-	actions := counterEvents.load()
+	counterValue, actions := state.snapshot()
 	var buf bytes.Buffer
 	err := indexTpl.ExecuteTemplate(&buf, "main", mainViewData{
 		ClientID: clientID,
-		Counter:  atomic.LoadInt64(&counter.value),
+		Counter:  counterValue,
 		Actions:  actions,
 		ServerAt: time.Now().Format(time.RFC3339),
 	})

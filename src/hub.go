@@ -37,9 +37,11 @@ func (h *sseHub) start() {
 			case client := <-h.register:
 				// Add new client to the active set.
 				clients[client] = struct{}{}
+				log.Printf("sse client register id=%s total=%d", client.clientID, len(clients))
 			case client := <-h.unregister:
 				// Remove client when their SSE connection closes.
 				delete(clients, client)
+				log.Printf("sse client unregister id=%s total=%d", client.clientID, len(clients))
 			case patch := <-h.broadcast:
 				// Best-effort broadcast; drop for slow clients to keep server responsive.
 				for client := range clients {
@@ -56,13 +58,11 @@ func (h *sseHub) start() {
 
 func (h *sseHub) registerClient(client *sseClient) {
 	// Add a client to the hub.
-	log.Printf("sse client register id=%s", client.clientID)
 	h.register <- client
 }
 
 func (h *sseHub) unregisterClient(client *sseClient) {
 	// Remove a client from the hub.
-	log.Printf("sse client unregister id=%s", client.clientID)
 	h.unregister <- client
 }
 
