@@ -16,10 +16,12 @@
       <p>Client ID: {{ .ClientID }}</p>
       <p>Counter: {{ .Counter }}</p>
       <button data-on:click="@post('/increment')">Increment</button>
-      <h2>Increment clients</h2>
+      <button data-on:click="@post('/decrement')">Decrement</button>
+      <button data-on:click="@post('/reset')">Reset</button>
+      <h2>Counter actions</h2>
       <ul id="inc-list">
-        {{ range .IncIDs }}
-        <li>{{ . }}</li>
+        {{ range .Actions }}
+        <li>{{ .Action }} by {{ .ClientID }}</li>
         {{ end }}
       </ul>
     </main>
